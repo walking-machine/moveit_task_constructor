@@ -803,7 +803,7 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 		std::vector<Interface::iterator> oit_to_enable;
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
 			if (!static_cast<Connecting*>(me_)->compatible(*it, *oit))
-				continue;
+				std::cout << "Stage " << this->name() << "found imcompatible states\n";
 
 			// re-enable the opposing state oit (and its associated solution branch) if its status is ARMED
 			// https://github.com/moveit/moveit_task_constructor/pull/309#issuecomment-974636202
@@ -910,7 +910,7 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 	const planning_scene::PlanningSceneConstPtr& to = to_state.scene();
 
 	auto false_with_debug = [](auto... args) {
-		RCLCPP_DEBUG_STREAM(rclcpp::get_logger("Connecting"), fmt::format(args...));
+		RCLCPP_INFO_STREAM(rclcpp::get_logger("Connecting"), fmt::format(args...));
 		return false;
 	};
 
@@ -925,8 +925,11 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 		if (!to_object)
 			return false_with_debug("{}: object missing: {}", name(), from_object_name);
 
-		if (!(from_object->pose_.matrix() - to_object->pose_.matrix()).isZero(1e-4))
+		if (!(from_object->pose_.matrix() - to_object->pose_.matrix()).isZero(1e-4)) {
+			std::cout << from_object->pose_.translation() << "\n" << to_object->pose_.translation() << "\n";
+			std::cout << to_object->pose_.rotation().matrix().inverse()  * from_object->pose_.rotation().matrix() << "\n";
 			return false_with_debug("{}: different object pose: {}", name(), from_object_name);
+		}
 
 		if (from_object->shape_poses_.size() != to_object->shape_poses_.size())
 			return false_with_debug("{}: different object shapes: {}", name(), from_object_name);
