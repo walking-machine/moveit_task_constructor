@@ -121,8 +121,8 @@ void GeneratePlacePose::compute() {
 				// rotate object at target pose about world's z-axis
 				Eigen::Vector3d pos = object.translation();
 				object.pretranslate(-pos)
-				    .prerotate(Eigen::AngleAxisd(i * 2. * M_PI / z_rotations, Eigen::Vector3d::UnitZ()))
-				    .pretranslate(pos);
+					.rotate(Eigen::AngleAxisd(i * 2. * M_PI / z_rotations, Eigen::Vector3d::UnitZ()))
+					.pretranslate(pos);
 
 				// target ik_frame's pose w.r.t. planning frame
 				geometry_msgs::msg::PoseStamped target_pose_msg;
