@@ -803,7 +803,7 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 		std::vector<Interface::iterator> oit_to_enable;
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
 			if (!static_cast<Connecting*>(me_)->compatible(*it, *oit))
-				std::cout << "Stage " << this->name() << "found imcompatible states\n";
+				continue;
 
 			// re-enable the opposing state oit (and its associated solution branch) if its status is ARMED
 			// https://github.com/moveit/moveit_task_constructor/pull/309#issuecomment-974636202
@@ -917,6 +917,39 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 	if (from->getWorld()->size() != to->getWorld()->size())
 		return false_with_debug("{}: different number of collision objects", name());
 
+	auto semi_compatible = [](const Eigen::Isometry3d from_pose,
+										const Eigen::Isometry3d to_pose,
+										const std::vector<shapes::ShapeConstPtr>& shapes) {
+		if (shapes.size() != 1)
+				return false;
+
+		if (shapes[0]->type == shapes::CYLINDER)
+			for (double x_rot : {0., M_PI}) {
+				auto from_pose_cp = from_pose;
+
+				auto z_rot = from_pose_cp.rotate(Eigen::AngleAxisd(x_rot, Eigen::Vector3d::UnitX()))
+										 .rotation().inverse() * to_pose.rotation();
+				auto skew_sym = z_rot.transpose() - z_rot;
+				auto axis = Eigen::Vector3d(skew_sym(1, 2), skew_sym(2, 0),
+																  skew_sym(0, 1)).normalized();
+				if ((axis - Eigen::Vector3d(0, 0, 1)).isZero(1e-2) ||
+					(axis - Eigen::Vector3d(0, 0, -1)).isZero(1e-2))
+					return true;
+			}
+		else if (shapes[0]->type == shapes::SPHERE)
+			return (from_pose.translation() - to_pose.translation()).isZero(1e-4);
+		else if (shapes[0]->type == shapes::BOX)
+			for (auto& axis : {Eigen::Vector3d::UnitX(), Eigen::Vector3d::UnitY(), Eigen::Vector3d::UnitZ()}) {
+				auto from_pose_cp = from_pose;
+
+				if ((from_pose_cp.rotate(Eigen::AngleAxisd(M_PI, axis))
+								 .matrix() - to_pose.matrix()).isZero(1e-4))
+					return true;
+			}
+
+		return false;
+	};
+
 	// both scenes should have the same set of collision objects, at the same location
 	for (const auto& from_object_pair : *from->getWorld()) {
 		const std::string& from_object_name = from_object_pair.first;
@@ -925,7 +958,8 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 		if (!to_object)
 			return false_with_debug("{}: object missing: {}", name(), from_object_name);
 
-		if (!(from_object->pose_.matrix() - to_object->pose_.matrix()).isZero(1e-4)) {
+		if (!(from_object->pose_.matrix() - to_object->pose_.matrix()).isZero(1e-4) &&
+			!semi_compatible(from_object->pose_, to_object->pose_, from_object->shapes_)) {
 			std::cout << from_object->pose_.translation() << "\n" << to_object->pose_.translation() << "\n";
 			std::cout << to_object->pose_.rotation().matrix().inverse()  * from_object->pose_.rotation().matrix() << "\n";
 			return false_with_debug("{}: different object pose: {}", name(), from_object_name);
@@ -970,7 +1004,8 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 		auto from_end = from_object->getShapePosesInLinkFrame().cend();
 		auto to_it = to_object->getShapePosesInLinkFrame().cbegin();
 		for (; from_it != from_end; ++from_it, ++to_it)
-			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4))
+			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4) &&
+				!semi_compatible(*from_it, *to_it, from_object->getShapes()))
 				return false_with_debug("{}: different pose of attached object shape: {}", name(), from_object->getName());
 	}
 	return true;
