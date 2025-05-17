@@ -81,7 +81,7 @@ struct PlannerCache
 
 planning_pipeline::PlanningPipelinePtr PipelinePlanner::create(const rclcpp::Node::SharedPtr& node,
                                                                const PipelinePlanner::Specification& spec) {
-	static PlannerCache cache;
+	PlannerCache cache;
 
 	static constexpr char const* PLUGIN_PARAMETER_NAME = "planning_plugin";
 
