@@ -52,6 +52,7 @@
 #include <cassert>
 #include <functional>
 #include <cmath>
+#include <chrono>
 
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene);
@@ -326,6 +327,9 @@ public:
 
 	/// order solutions by their cost
 	bool operator<(const SolutionBase& other) const { return this->cost_ < other.cost_; }
+
+	// computation time of the stage up to this solution
+	std::chrono::duration<double> solution_ts;
 
 protected:
 	SolutionBase(Stage* creator = nullptr, double cost = 0.0, std::string comment = "", std::string planner_id = "")

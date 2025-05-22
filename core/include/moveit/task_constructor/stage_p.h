@@ -162,6 +162,7 @@ public:
 			throw PreemptStageException();
 
 		auto compute_start_time = std::chrono::steady_clock::now();
+		compute_start_time_ = compute_start_time;
 		try {
 			compute();
 		} catch (const Property::error& e) {
@@ -197,6 +198,9 @@ protected:
 
 	// The total compute time
 	std::chrono::duration<double> total_compute_time_;
+
+	// Start time of the latest compute
+	std::chrono::time_point<std::chrono::steady_clock> compute_start_time_;
 
 	// functions called for each new solution
 	std::list<Stage::SolutionCallback> solution_cbs_;

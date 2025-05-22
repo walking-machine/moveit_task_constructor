@@ -102,6 +102,7 @@ StagePrivate::StagePrivate(Stage* me, const std::string& name)
   , name_{ name }
   , cost_term_{ std::make_unique<CostTerm>() }
   , total_compute_time_{}
+  , compute_start_time_{}
   , parent_{ nullptr }
   , introspection_{ nullptr }
   , preempt_requested_{ nullptr } {}
@@ -261,6 +262,9 @@ void StagePrivate::newSolution(const SolutionBasePtr& solution) {
 	// call solution callbacks for both, valid solutions and failures
 	for (const auto& cb : solution_cbs_)
 		cb(*solution);
+
+	auto solution_found_time = std::chrono::steady_clock::now();
+	solution->solution_ts = total_compute_time_ + (solution_found_time - compute_start_time_);
 
 	if (parent() && !solution->isFailure())
 		parent()->onNewSolution(*solution);
