@@ -331,6 +331,10 @@ public:
 	// computation time of the stage up to this solution
 	std::chrono::duration<double> solution_ts;
 
+	// roadmap statics
+	int num_verts = -1;
+	int num_edges = -1;
+
 protected:
 	SolutionBase(Stage* creator = nullptr, double cost = 0.0, std::string comment = "", std::string planner_id = "")
 	  : creator_(creator), cost_(cost), comment_(std::move(comment)), planner_id_(std::move(planner_id)) {}

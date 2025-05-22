@@ -36,6 +36,7 @@
    Desc:    Connect arbitrary states by motion planning
 */
 
+#include <moveit/planning_pipeline/planning_pipeline.h>
 #include <moveit/task_constructor/stages/connect.h>
 #include <moveit/task_constructor/merge.h>
 #include <moveit/task_constructor/cost_terms.h>
@@ -43,6 +44,7 @@
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
+#include <moveit/task_constructor/solvers/pipeline_planner.h>
 
 #if FMT_VERSION >= 90000
 template <>
@@ -197,6 +199,15 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 		solution = makeSequential(sub_trajectories, intermediate_scenes, from, to);
 	if (!success)  // error during sequential planning
 		solution->markAsFailure(comment);
+
+	solution->num_edges = 0;
+	solution->num_verts = 0;
+
+	auto planner = dynamic_cast<solvers::PipelinePlanner *>(planner_[0].second.get());
+	if (planner) {
+		auto planner_state = planner->getPipeline()->getPlannerManager().get();
+		planner_state->getRoadmapData(solution->num_verts, solution->num_edges);
+	}
 	connect(from, to, solution);
 }
 
