@@ -334,6 +334,8 @@ public:
 	// roadmap statics
 	int num_verts = -1;
 	int num_edges = -1;
+	int new_verts = -1;
+	int new_edges = -1;
 
 protected:
 	SolutionBase(Stage* creator = nullptr, double cost = 0.0, std::string comment = "", std::string planner_id = "")

@@ -151,6 +151,8 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	MergeMode mode = props.get<MergeMode>("merge_mode");
 	double max_distance = props.get<double>("max_distance");
 	const auto& path_constraints = props.get<moveit_msgs::msg::Constraints>("path_constraints");
+	int num_verts = 0;
+	int num_edges = 0;
 
 	const moveit::core::RobotState& final_goal_state = to.scene()->getCurrentState();
 	std::vector<PlannerIdTrajectoryPair> sub_trajectories;
@@ -158,6 +160,12 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	std::vector<planning_scene::PlanningSceneConstPtr> intermediate_scenes;
 	planning_scene::PlanningSceneConstPtr start = from.scene();
 	intermediate_scenes.push_back(start);
+
+	auto planner = dynamic_cast<solvers::PipelinePlanner *>(planner_[0].second.get());
+	if (planner) {
+		auto planner_state = planner->getPipeline()->getPlannerManager().get();
+		planner_state->getRoadmapData(num_verts, num_edges);
+	}
 
 	bool success = false;
 	std::string comment = "No planners specified";
@@ -200,14 +208,18 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	if (!success)  // error during sequential planning
 		solution->markAsFailure(comment);
 
-	solution->num_edges = 0;
-	solution->num_verts = 0;
+	solution->num_edges = num_edges;
+	solution->num_verts = num_verts;
 
-	auto planner = dynamic_cast<solvers::PipelinePlanner *>(planner_[0].second.get());
+	planner = dynamic_cast<solvers::PipelinePlanner *>(planner_[0].second.get());
 	if (planner) {
 		auto planner_state = planner->getPipeline()->getPlannerManager().get();
-		planner_state->getRoadmapData(solution->num_verts, solution->num_edges);
+		planner_state->getRoadmapData(num_verts, num_edges);
 	}
+
+	solution->new_edges = num_edges - solution->num_edges;
+	solution->new_verts = num_verts - solution->num_verts;
+
 	connect(from, to, solution);
 }
 
