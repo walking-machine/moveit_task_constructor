@@ -41,6 +41,8 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
+#include <ompl/tools/debug/Profiler.h>
+
 #include <rclcpp/logger.hpp>
 #include <rclcpp/logging.hpp>
 
@@ -708,8 +710,10 @@ bool SerialContainer::canCompute() const {
 
 void SerialContainer::compute() {
 	for (const auto& stage : pimpl()->children()) {
-		if (stage->pimpl()->canCompute())
+		if (stage->pimpl()->canCompute()) {
+			ompl::tools::Profiler::SetPrefix(stage->name());
 			stage->pimpl()->runCompute();
+		}
 	}
 }
 

@@ -47,6 +47,7 @@ ament_target_dependencies(${PROJECT_NAME}
 	rclcpp
 	rviz_marker_tools
 	visualization_msgs
+	OMPL
 )
 target_include_directories(${PROJECT_NAME}
 	PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
