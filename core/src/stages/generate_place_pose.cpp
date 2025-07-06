@@ -61,6 +61,8 @@ GeneratePlacePose::GeneratePlacePose(const std::string& name) : GeneratePose(nam
 	auto& p = properties();
 	p.declare<std::string>("object");
 	p.declare<bool>("allow_z_flip", false, "allow placing objects upside down");
+	p.declare<bool>("z_rotations_override", false, "use non-default number of z-rotations");
+	p.declare<uint>("z_rotations", 0, "z rotations");
 }
 
 void GeneratePlacePose::onNewSolution(const SolutionBase& s) {
@@ -113,7 +115,7 @@ void GeneratePlacePose::compute() {
 	scene->getTransforms().transformPose(pose_msg.header.frame_id, target_pose, target_pose);
 
 	// spawn the nominal target object pose, considering flip about z and rotations about z-axis
-	auto spawner = [&s, &scene, &ik_frame, this](const Eigen::Isometry3d& nominal, uint z_flips, uint z_rotations = 10) {
+	auto spawner = [&s, &scene, &ik_frame, this](const Eigen::Isometry3d& nominal, uint z_flips, uint z_rotations = 1) {
 		for (uint flip = 0; flip <= z_flips; ++flip) {
 			// flip about object's x-axis
 			Eigen::Isometry3d object = nominal * Eigen::AngleAxisd(flip * M_PI, Eigen::Vector3d::UnitX());
@@ -144,19 +146,23 @@ void GeneratePlacePose::compute() {
 	};
 
 	uint z_flips = props.get<bool>("allow_z_flip") ? 1 : 0;
+	bool z_rotations_override = props.get<bool>("z_rotations_override");
+	uint z_rotations_num = props.get<uint>("z_rotations");
 	if (object && object->getShapes().size() == 1) {
 		switch (object->getShapes()[0]->type) {
 			case shapes::CYLINDER:
-				spawner(target_pose, z_flips);
+				spawner(target_pose, z_flips, z_rotations_override ? z_rotations_num : 10);
 				return;
 
 			case shapes::BOX: {  // consider 180/90 degree rotations about z axis
 				const double* dims = static_cast<const shapes::Box&>(*object->getShapes()[0]).size;
-				spawner(target_pose, z_flips, (std::abs(dims[0] - dims[1]) < 1e-5) ? 4 : 2);
+				uint rotations = z_rotations_override ?
+								 z_rotations_num : ((std::abs(dims[0] - dims[1]) < 1e-5) ? 4 : 2);
+				spawner(target_pose, z_flips, rotations);
 				return;
 			}
 			case shapes::SPHERE:  // keep original orientation and rotate about world's z
-				spawner(target_pose, z_flips);
+				spawner(target_pose, z_flips, z_rotations_override ? z_rotations_num : 10);
 				return;
 			default:
 				break;
