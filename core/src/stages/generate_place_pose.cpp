@@ -151,7 +151,7 @@ void GeneratePlacePose::compute() {
 	if (object && object->getShapes().size() == 1) {
 		switch (object->getShapes()[0]->type) {
 			case shapes::CYLINDER:
-				spawner(target_pose, z_flips, z_rotations_override ? z_rotations_num : 10);
+				spawner(target_pose, z_flips, z_rotations_num ? z_rotations_num : 10);
 				return;
 
 			case shapes::BOX: {  // consider 180/90 degree rotations about z axis
